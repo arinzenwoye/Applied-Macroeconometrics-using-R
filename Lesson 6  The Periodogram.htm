@@ -1,0 +1,196 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>Lesson 6: The Periodogram</title>
+    <!-- base href="https://onlinecourses.science.psu.edu/stat510" -->
+    <link type="text/css" rel="stylesheet" href="Lesson%206%20%20The%20Periodogram_files/print.htm">
+      </head>
+  <body>
+        
+    <div id="node-52" class="section-1">
+  <h1 class="book-heading">Lesson 6: The Periodogram</h1>
+  <p><strong>Assignments:</strong></p>
+<ul>
+<li>Read Examples 2.8-2.9 (pages 67-70) and Sections 4.1-4.2 (pages 173-180) of your text.</li>
+<li>Read through the Lesson 6 online notes that follow.</li>
+<li>Complete Lesson 6 Assignment.</li>
+</ul>
+<p><strong>Overview:</strong></p>
+<p>This week we'll study the periodogram, a tool for describing and identifying the dominant cycles in a time series.</p>
+<p><strong>Learning Objectives</strong>:</p>
+<p>After successfully completing this lesson, you should be able to:</p>
+<ul>
+<li>Create a periodogram in R</li>
+<li>Identify the dominant periods (or frequencies) of a time series</li>
+</ul>
+  <div id="node-71" class="section-2">
+  <h1 class="book-heading">6.1  The Periodogram</h1>
+  <p>Any time series can be expressed as a combination of cosine (or 
+sine) waves with differing periods (how long it takes to complete a full
+ cycle) and amplitudes (maximum/minimum value during the cycle).&nbsp; 
+This fact can be utilized to examine the periodic (cyclical) behavior in
+ a time series.</p>
+<p>A <strong>periodogram</strong> is used to identify the dominant 
+periods (or frequencies) of a time series.&nbsp; This can be a helpful 
+tool for identifying the dominant cyclical behavior in a series, 
+particularly when the cycles are not related to the commonly encountered
+ monthly or quarterly seasonality.</p>
+<p><strong>Properties of a Cosine Function</strong></p>
+<p>For discrete time (meaning time <em>t</em> = integer values), these definitions are useful for a cosine (or sine) wave:</p>
+<p style="padding-left: 30px;">• The <em><strong>period</strong></em> (T) is the number of time periods required to complete a single cycle of the cosine function.</p>
+<p style="padding-left: 30px;">• The <em><strong>frequency</strong></em> is ω = 1/T. It is the fraction of the complete cycle that’s completed in a single time period.</p>
+<p>Imagine fitting a single cosine wave to a time series observed in discrete time.&nbsp; Suppose that we write this cosine wave as</p>
+<p style="text-align: center;">\[x_t = A \cos(2\pi \omega t + \phi)\]</p>
+<p><em>A </em>is the amplitude.&nbsp; It determines the maximum absolute height of the curve.</p>
+<p style="padding-left: 30px;">ω is the frequency.&nbsp; It controls how rapidly the curve oscillates.</p>
+<p style="padding-left: 30px;">φ is the phase.&nbsp; It determines the starting point, in angle degrees, for the cosine wave.</p>
+<p>To temporarily simplify things, suppose that φ=0 and think about the quantity 2πω<em>t</em>.&nbsp; Recall that T = number of time periods for a full cycle and that ω<em> </em>= 1/T.&nbsp; As we move through time from <em>t</em> = 0 to <em>t</em> = T, the value of 2πω<em>t = </em>2π<em>t</em>/T<em> </em>ranges from 0 at <em>t</em> = 0 to 2π at <em>t</em> = T.&nbsp; In angle degrees, this represents a full cycle of a cosine wave.</p>
+<p>In Example 1.12 of the text, on pages 16-17, the authors give a plot of the function</p>
+<p style="text-align: center;">\[x_t = 2 \cos\left(2\pi \frac{1}{50}t + 0.6\pi \right)\]</p>
+<p>for <em>t</em> = 1, 2, ..., 500.&nbsp; In addition they add normally 
+distributed errors with mean 0 and variance 1 to this function in a 
+second plot, and add normally distributed errors with mean 0 and 
+variance 25 in a third plot.&nbsp; The R code is given on page 16.&nbsp;
+ Following are the first two plots, the basic cosine function and the 
+function plus errors with variance 1.&nbsp; In the basic plot, the 
+period = 50 and the frequency is 1/50.&nbsp; Thus it takes 50 time 
+periods to cycle through the cosine function.&nbsp; Before errors are 
+added, the maximum and minimum values are +2 and -2, respectively.</p>
+<p style="text-align: center;"><img src="Lesson%206%20%20The%20Periodogram_files/graph_56.gif" alt="graph" height="279" width="371"></p>
+<p>Following is what the plots look like when we change the period to 
+250 so that the frequency is 1/250 = 0.004.&nbsp; The function is</p>
+<p style="text-align: center;">\[x_t = 2 \cos\left(2\pi \frac{1}{250}t + 0.6 \pi \right)\]</p>
+<p>for t = 1, 500.</p>
+<p style="text-align: center;"><img src="Lesson%206%20%20The%20Periodogram_files/graph_57.gif" alt="graph" height="280" width="362"></p>
+<p>Notice above that longer period (250 for the second set of plots versus 50 in the first set of plots) leads to fewer cycles.</p>
+<p><strong>A Useful Identity</strong></p>
+<p>A useful trigonometric identity is</p>
+<p style="text-align: center;">\[A \cos(2\pi \omega t + \phi) = \beta_1 \cos(2\pi \omega t) + \beta_2 \sin(2\pi \omega t),\]</p>
+<p>with \(\beta_1 = A \cos(\phi)\) and \(\beta_2 = -A\sin(\phi)\).</p>
+<p>This identity is used when we determine the <em>periodogram</em> of a series.</p>
+<p><strong>The Periodogram</strong></p>
+<p>In the area of time series called spectral analysis, we view a time 
+series as a sum of cosine waves with varying amplitudes and 
+frequencies.&nbsp; One goal of an analysis is to identify the important 
+frequencies (or periods) in the observed series.&nbsp; A starting tool 
+for doing this is the periodogram.&nbsp; The periodogram graphs a 
+measure of the relative importance of possible frequency values that 
+might explain the oscillation pattern of the observed data.</p>
+<p>Suppose that we have observed data at <em>n</em> distinct time points, and for convenience we assume that <em>n</em>
+ is even.&nbsp; Our goal is to identify important frequencies in the 
+data.&nbsp; To pursue the investigation, we consider the set of possible
+ <em>frequencies</em> ω<sub>j</sub> = <em>j</em>/<em>n</em> for <em>j</em> = 1, 2,…, <em>n/2</em>. These are called the harmonic frequencies.</p>
+<p>We will represent the time series as</p>
+<p style="text-align: center;">\[x_t&nbsp;= 
+\sum_{j=1}^{n/2}\left[\beta_1\left(\frac{j}{n}\right)\cos(2\pi \omega_j 
+t) + \beta_2\left(\frac{j}{n}\right)\sin(2\pi \omega_j t)\right]. \]</p>
+<p>This is a sum of sin and cosine functions at the harmonic 
+frequencies.&nbsp; The form of the equation comes from the identity 
+given above in the section entitled “A Useful Identity”).</p>
+<p>Think of the β<sub>1</sub>(<em>j</em>/<em>n</em>) and β<sub>2</sub>(<em>j</em>/<em>n</em>) as regression parameters.&nbsp; Then there are a total of <em>n</em> parameters because we let <em>j</em> move from 1 to <em>n</em>/2.&nbsp; This means that we have <em>n</em> data points and <em>n</em> parameters, so the fit of this regression model will be exact.</p>
+<p>The first step in the creation of the periodogram is the estimation of the β<sub>1</sub>(<em>j/n</em>) and β<sub>2</sub>(<em>j</em>/<em>n</em>) parameters.&nbsp; It’s actually not necessary to carry out this regression to estimate the β<sub>1</sub>(<em>j/n</em>) and β<sub>2</sub>(<em>j</em>/<em>n</em>)
+ parameters.&nbsp; Instead a mathematical device called the Fast Fourier
+ Transform (FFT) is used.&nbsp; We’ll skip the details of that – it’s 
+advanced Calculus, something not required for this course.</p>
+<p>After the parameters have been estimated, we define</p>
+<p style="text-align: center;">\[P\left(\frac{j}{n}\right) = \hat{\beta}^2_1\left(\frac{j}{n}\right)+\hat{\beta}^2_2\left(\frac{j}{n}\right)\]</p>
+<p>This is the value of the sum of squared “regression” coefficients at the frequency <em>j</em>/<em>n</em>.</p>
+<p>This is the periodogram value at the frequency <em>j</em>/<em>n</em>,
+ although the authors of our textbook (on page 69) say they will call 
+this the scaled periodogram value.&nbsp; Thus, for them the scaled 
+periodogram is a plot of <em>P</em>(<em>j/n</em>)<em> </em>versus<em> j/n</em> for <em>j</em> = 1, 2, …, <em>n</em>/2.</p>
+<p><strong>Interpretation and Use</strong>:</p>
+<p>A relatively large value of <em>P</em>(<em>j/n</em>) indicates relatively more importance for the frequency <em>j/n</em> (or near <em>j/n</em>) in explaining the oscillation in the observed series.&nbsp; <em>P</em>(<em>j/n</em>) is proportional to the squared correlation between the observed series and a cosine wave with frequency <em>j/n</em>.&nbsp;
+ The dominant frequencies might be used to fit cosine (or sine) waves to
+ the data, or might be used simply to describe the important 
+periodicities in the series.</p>
+<p><strong>Some R Issues</strong></p>
+<p>The Fast Fourier Transform in R doesn’t quite give a direct estimate 
+of the scaled periodogram.&nbsp; A small bit of scaling has to be done 
+(and the FFT produces estimates at more frequencies than we need).&nbsp;
+ These things are easy to fix.&nbsp; Some code is given on page 70 of 
+the book for simulated data.&nbsp; The first two lines of the code on 
+page 70 generate simulated data, so those lines won’t be there when you 
+analyze an actual dataset.</p>
+<p><strong>Example 1</strong>: The series is <em>n</em> = 128 values of 
+brain cortex activity, measured every 2 seconds for 256 seconds.&nbsp; A
+ stimulus, brushing of the back of the hand, was applied for 32 seconds 
+and then was stopped for 32 seconds.&nbsp; This pattern was repeated for
+ a total of 256 seconds. The series is actually the average of this 
+process for five different subjects.</p>
+<p>A time series plot follows.&nbsp; We see a regularly repeating 
+pattern that seems to repeat about every 30 or so time periods.&nbsp; 
+This may not be surprising.&nbsp; The stimulus was applied for 16 time 
+periods (of 2 seconds) and not applied for another 16 time periods (of 2
+ seconds).&nbsp; So, we might expect a repeating pattern every 16+16 = 
+32 time periods.</p>
+<p style="text-align: center;"><img src="Lesson%206%20%20The%20Periodogram_files/graph_58.gif" alt="graph" height="287" width="311"></p>
+<p>The periodogram shows a dominant spike at a low frequency –</p>
+<p style="text-align: center;"><img src="Lesson%206%20%20The%20Periodogram_files/graph_59.gif" alt="graph" height="267" width="298"></p>
+<p>It’s hard to judge the exact location of the peak.&nbsp; It would 
+help to print out the first few values of the periodogram and the 
+frequencies.&nbsp; The first 16 scaled periodogram values and 
+frequencies follow.&nbsp; The peak value of periodogram is the fifth 
+value, and that corresponds to a frequency of 0.0312500.&nbsp; The 
+period for this value = 1/0.0312500 = 32.&nbsp; That is, it takes 32 
+time periods for a complete cycle.&nbsp; This is what we expected!</p>
+<p><span style="font-family: courier new,courier;">&gt; f</span></p>
+<p><span style="font-family: courier new,courier;">[1] 0.0000000 0.0078125 0.0156250 0.0234375 <strong>0.0312500</strong> 0.0390625 0.0468750 0.0546875</span></p>
+<p><span style="font-family: courier new,courier;">[9] 0.0625000 0.0703125 0.0781250 0.0859375 0.0937500 0.1015625 0.1093750 0.1171875</span></p>
+<p><span style="font-family: courier new,courier;">&gt; round(P,7)</span></p>
+<p><span style="font-family: courier new,courier;">[1] 0.0002098 0.0001267 0.0006303 0.0019079 <strong>0.2290052</strong> 0.0008480 0.0002474 0.0006253</span></p>
+<p><span style="font-family: courier new,courier;">[9] 0.0046971 0.0004434 0.0000723 0.0004260 0.0092948 0.0002298 0.0003149 0.0007845</span></p>
+<p>Here’s the code.&nbsp; The value 128 in a few of the lines is the 
+sample size.&nbsp; The fast Fourier Transform (fft) includes a frequency
+ value of 0 and goes all the way to 1.&nbsp; The second line, creates 
+the basis for what our textbook authors call the unscaled 
+periodogram.&nbsp; We only need to go to 0.5 for the periodogram so in 
+the third line below we pick off the first (<em>n</em>/2)+1 = 65 
+elements of FF (the object created in the second line).&nbsp; Also in 
+the third line, the multiplication by 4/128 (=4/<em>n</em>) creates the 
+scaled periodogram as described on pages 68-70 of the book.&nbsp; In a 
+sense, this scaling is optional because we would see the same pattern 
+even if we did not use this constant.</p>
+<p style="padding-left: 30px;"><span style="font-size: small;"><span style="font-family: terminal,monaco;"><span style="font-family: courier new,courier;">x = scan("cortex.dat")<br>FF = abs(fft(x)/sqrt(128))^2<br>P = (4/128)*FF[1:65] # Only need the first (n/2)+1 values of the FFT result.<br>f = (0:64)/128 # this creates harmonic frequencies from 0 to .5 in steps of 1/128.<br>plot(f, P, type="l") # This plots the periodogram; type = “l” creates a line plot.&nbsp; Note: l is lowercase L, not number 1.</span><br></span></span></p>
+<p><strong>Example 2</strong>:&nbsp; The series is semi-annual sunspot activity (smoothed number of sunspots) for <em>n</em>
+ = 459 time periods.&nbsp; This is semi-annual data, so this is 459/2 = 
+229.5 years worth of data.&nbsp; The following time series plot shows 
+ups and downs, but it’s hard to judge the span(s) of any regular 
+periodicity.</p>
+<p style="text-align: center;"><img src="Lesson%206%20%20The%20Periodogram_files/graph_60.gif" alt="graph" height="339" width="339"></p>
+<p>The odd number of points creates a minor problem as the periodogram 
+work was described in terms of an even number of points.&nbsp; There are
+ a few possibilities for dealing with this.&nbsp; We might set aside a 
+data value from one end of the series or pad the series with something 
+like the mean value for the series.&nbsp; All tries I made along this 
+path resulted in a periodogram that was overwhelmingly dominated by the 
+lowest possible frequency.&nbsp; Generally this is a sign that trend may
+ be present.&nbsp; It’s generally best to detrend the data either using 
+differences or some sort of trend line before determining the 
+periodogram.&nbsp; The differenced data (for this example) has the added
+ benefit of creating a sample size that’s even - with <em>n</em> = 459 data values there are 458 differences.</p>
+<p>Following is the periodogram of the differenced (detrended) data.</p>
+<p style="text-align: center;"><img src="Lesson%206%20%20The%20Periodogram_files/graph_61.gif" alt="graph" height="302" width="334"></p>
+<p>The dominant peak area occurs somewhere around a frequency of 
+0.05.&nbsp; Investigation of the periodogram values indicates that the 
+peak occurs at nearly exactly this frequency.&nbsp; This corresponds to a
+ period of about 1/.05 = 20 time periods.&nbsp; That’s 10 years, since 
+this is semi-annual data.&nbsp; Thus there appears to be a dominant 
+periodicity of about 10 years in sunspot activity.</p>
+<p style="padding-left: 30px;"><span style="font-family: courier new,courier;"><span style="font-size: small;">sunspots=scan("sunspots.dat")<br>plot(sunspots,type="b")<br>x = diff(sunspots)<br>I = abs(fft(x)/sqrt(458))^2<br>P = (4/458)*I[1:230]<br>freq = (0:229)/458<br>plot(freq,P,type="l") </span></span></p>
+<p><strong>Spectral Analysis</strong></p>
+<p>Spectral analysis, described in Chapter 4 of our textbook, is the 
+analysis of the dominant frequencies in a time series.&nbsp; In 
+practice, spectral analysis imposes smoothing techniques on the 
+periodogram.&nbsp; With certain assumptions, we can also create 
+confidence intervals to estimate the peak frequency regions.&nbsp; 
+Spectral analysis can also be used to examine the association between 
+two different time series.&nbsp; We’ll look at some of these techniques 
+later in the course.</p>
+  </div>
+</div>
+    
+  
+
+</body></html>
